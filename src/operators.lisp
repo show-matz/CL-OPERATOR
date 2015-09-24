@@ -32,6 +32,8 @@
 |#
 (defgeneric operator_++ (x))
 (defgeneric operator_-- (x))
+(defgeneric operator_& (obj key))
+(defgeneric operator_const& (obj key))
 (defgeneric operator_* (x))
 (defgeneric (setf operator_*) (newval x))
 (defgeneric operator_[] (x key))
@@ -47,27 +49,6 @@
 (defgeneric operator_=  (lhs rhs))
 (defgeneric operator_+= (lhs rhs))
 (defgeneric operator_-= (lhs rhs))
-
-(declare-macro-overload operator_& (1 2))
-(declare-macro-overload operator_const& (1 2))
-
-(defmacro-overload operator_& (sym)
-  (check-type sym symbol)
-  (let ((newval (gensym "NEWVAL")))
-	`(make-instance 'fixed-pointer :getter (lambda () ,sym)
-								   :setter (lambda (,newval) (setf ,sym ,newval)))))
-
-(defmacro-overload operator_const& (sym)
-  (check-type sym symbol)
-  `(make-instance 'const-fixed-pointer :getter (lambda () ,sym)))
-
-
-(defmacro-overload operator_& (sym key)
-  `(make-instance 'vector-pointer :buffer ,sym :index ,key))
-
-(defmacro-overload operator_const& (sym key)
-  `(make-instance 'const-vector-pointer :buffer ,sym :index ,key))
-
 
 ;;------------------------------------------------------------------------------
 ;;
@@ -116,10 +97,26 @@
   `(prog1 (clone ,sym)
 	 (setf ,sym (operator_-- ,sym))))
 
+;(declare-macro-overload _& (1 2))
+(defmacro _& (&rest args)
+  (let ((cnt (length args)))
+    (cond ((= 1 cnt) (let ((g-newval (gensym "NEWVAL")))
+					   `(make-instance 'fixed-pointer :getter (lambda () ,(car args))
+													  :setter (lambda (,g-newval) (setf ,(car args) ,g-newval)))))
+          ((= 2 cnt) `(operator_& ,@args))
+          (t (error "can't resolve overload for ~a" '_&)))))
+
+;(declare-macro-overload const_& (1 2))
+(defmacro const_& (&rest args)
+  (let ((cnt (length args)))
+    (cond ((= 1 cnt) `(make-instance 'const-fixed-pointer :getter (lambda () ,(car args))))
+          ((= 2 cnt) `(operator_const& ,@args))
+          (t (error "can't resolve overload for ~a" '_&)))))
+
+
+
 (defmacro _* (x)  `(operator_* ,x))
 (defmacro _[] (x key)  `(operator_[] ,x ,key))
-(defmacro _& (&rest args) `(operator_& ,@args))
-(defmacro const_& (&rest args) `(operator_const& ,@args))
 
 (defmacro _== (lhs rhs) `(operator_== ,lhs ,rhs))
 (defmacro _/= (lhs rhs) `(operator_/= ,lhs ,rhs))
@@ -190,8 +187,38 @@
 (defmethod operator_+  ((a string) (b string)) (concatenate 'string a b))
 (defmethod operator_+= ((a string) (b string)) (concatenate 'string a b))
 
+;; character
+(defmethod operator_== ((a character) (b character)) (char=  a b))
+(defmethod operator_/= ((a character) (b character)) (char/= a b))
+(defmethod operator_<  ((a character) (b character)) (char<  a b))
+(defmethod operator_<= ((a character) (b character)) (char<= a b))
+(defmethod operator_>  ((a character) (b character)) (char>  a b))
+(defmethod operator_>= ((a character) (b character)) (char>= a b))
+(defmethod operator_+  ((a character) (b integer))   (code-char (+ (char-code a) b)))
+(defmethod operator_+  ((a integer)   (b character)) (code-char (+ (char-code b) a)))
+(defmethod operator_+= ((a character) (b integer))   (code-char (+ (char-code a) b)))
+(defmethod operator_-  ((a character) (b integer))   (code-char (- (char-code a) b)))
+(defmethod operator_-  ((a integer)   (b character)) (- a (char-code b)))
+(defmethod operator_-= ((a character) (b integer))   (code-char (- (char-code a) b)))
 
 
+;; cl:vector
+(locally (declare (optimize speed))
+  (defmethod operator_[] ((arr cl:vector) (idx fixnum))
+	(declare (type cl:vector arr))
+	(declare (type fixnum idx))
+	(aref arr idx))
+
+  (defmethod (setf operator_[]) (newval (arr cl:vector) (idx fixnum))
+	(declare (type cl:vector arr))
+	(declare (type fixnum idx))
+	(setf (aref arr idx) newval)))
+	
+(defmethod operator_& ((arr cl:vector) (idx fixnum))
+  (make-instance 'vector-pointer :buffer arr :index idx))
+  
+(defmethod operator_const& ((arr cl:vector) (idx fixnum))
+  (make-instance 'const-vector-pointer :buffer arr :index idx))
 
 
 
@@ -301,8 +328,8 @@
 					`(,sym (operator_const& ,(onlisp/symb operand1)
 											,(if (integerp operand2)
 												 operand2 (onlisp/symb operand2))))))
-				 ((__is_&x    name cnt) `(,sym (operator_&      ,(onlisp/symb (subseq name 1)))))
-				 ((__is_C&x   name cnt) `(,sym (operator_const& ,(onlisp/symb (subseq name 7)))))
+				 ((__is_&x    name cnt) `(,sym (_&      ,(onlisp/symb (subseq name 1)))))
+				 ((__is_C&x   name cnt) `(,sym (const_& ,(onlisp/symb (subseq name 7)))))
 				 ((__is_x[n]  name cnt)
 				  (let* ((pos      (position #\[ name))
 						 (operand1 (subseq name 0 pos))

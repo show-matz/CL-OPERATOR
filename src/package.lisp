@@ -8,7 +8,7 @@
   (:nicknames	:opr)
   (:use			:common-lisp
 				:cl-overload)
-  (:export		#|--------------------------|#
+  (:export		#|-BEGIN EXPORT-------------|#
 				;cast.lisp
 				:operator_cast
 				:static-cast
@@ -26,6 +26,8 @@
 				;operators.lisp
 				:operator_++
 				:operator_--
+				:operator_&
+				:operator_const&
 				:operator_*
 				:operator_[]
 				:operator_==
@@ -39,8 +41,7 @@
 				:operator_=
 				:operator_+=
 				:operator_-=
-				:operator_&
-				:operator_const&
+				:operator_!
 				:_++
 				:_--
 				:_*
@@ -58,8 +59,8 @@
 				:_=
 				:_+=
 				:_-=
+				:_!
 				:with-operators
-				;pointers-impl.lisp
 				;pointers.lisp
 				:pointer
 				:fixed-pointer
@@ -68,7 +69,8 @@
 				:const-vector-pointer
 				:reverse-vector-pointer
 				:const-reverse-vector-pointer
-				#|--------------------------|#))
+				;pointers-impl.lisp
+				#|-END EXPORT---------------|#))
 
 (in-package :cl-operator)
 

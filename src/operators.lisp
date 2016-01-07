@@ -14,6 +14,8 @@
 #|
 #|EXPORT|#				:operator_++
 #|EXPORT|#				:operator_--
+#|EXPORT|#				:operator_&
+#|EXPORT|#				:operator_const&
 #|EXPORT|#				:operator_*
 #|EXPORT|#				:operator_[]
 #|EXPORT|#				:operator_==
@@ -27,8 +29,7 @@
 #|EXPORT|#				:operator_=
 #|EXPORT|#				:operator_+=
 #|EXPORT|#				:operator_-=
-#|EXPORT|#				:operator_&
-#|EXPORT|#				:operator_const&
+#|EXPORT|#				:operator_!
 |#
 (defgeneric operator_++ (x))
 (defgeneric operator_-- (x))
@@ -49,6 +50,7 @@
 (defgeneric operator_=  (lhs rhs))
 (defgeneric operator_+= (lhs rhs))
 (defgeneric operator_-= (lhs rhs))
+(defgeneric operator_!  (x))
 
 ;;------------------------------------------------------------------------------
 ;;
@@ -73,6 +75,7 @@
 #|EXPORT|#				:_=
 #|EXPORT|#				:_+=
 #|EXPORT|#				:_-=
+#|EXPORT|#				:_!
 |#
 (declare-macro-overload _++ (1 2))
 (declare-macro-overload _-- (1 2))
@@ -149,6 +152,8 @@
          ,set
          ,@var))))
 
+(defmacro _! (x)
+  `(operator_! ,x))
 
 
 ;;------------------------------------------------------------------------------
@@ -171,6 +176,8 @@
 (defmethod operator_=  (a b) b)
 (defmethod operator_+= (a b) (+ a b))
 (defmethod operator_-= (a b) (- a b))
+(defmethod operator_!  (x)   (null x))
+(defmethod operator_!  ((x number)) (zerop x))
 
 ;; default assign to nil operator for clonable.
 ;; MEMO : pair ( cons ) is not 'clonable'.
@@ -267,6 +274,9 @@
   (and (__is_C&x  name cnt)
 	   (__is_x[n] (subseq name 7) (- cnt 7))))
 
+(defun __is_!x (name cnt)
+  (and (< 1 cnt) (char= (char name 0) #\!)))
+
 (defun __is_@~x (name cnt)    ; means (clone x)
   (and (< 2 cnt) (string= "@~" name :end2 2)))
 
@@ -302,6 +312,7 @@
 					 (__is_x[n]   name cnt)
 					 (__is_&x[n]  name cnt)
 					 (__is_C&x[n] name cnt)
+					 (__is_!x     name cnt)
 					 (__is_@~x    name cnt)))))
 
 		   (make-symbol-macrolet (sym)
@@ -313,6 +324,7 @@
 				 ((__is_x++   name cnt) `(,sym (_++   ,(onlisp/symb (subseq name 0 (- cnt 2))) 0)))
 				 ((__is_x--   name cnt) `(,sym (_--   ,(onlisp/symb (subseq name 0 (- cnt 2))) 0)))
 				 ((__is_*x    name cnt) `(,sym (_*    ,(onlisp/symb (subseq name 1)))))
+				 ((__is_!x    name cnt) `(,sym (_!    ,(onlisp/symb (subseq name 1)))))
 				 ((__is_@~x   name cnt) `(,sym (clone ,(onlisp/symb (subseq name 2)))))
 				 ((__is_&x[n] name cnt)
 				  (let* ((pos      (position #\[ name))

@@ -17,10 +17,6 @@
 #|EXPORT|#				:dynamic-cast
 |#
 (defgeneric operator_cast (obj typename))
-(defmethod  operator_cast (obj typename)
-  (unless (typep obj typename)
-	(error 'type-mismatch :what (format nil "Can't cast ~A to ~A." obj typename)))
-  obj)
 
 (defmacro static-cast ((typename) object)
   (check-type typename symbol)

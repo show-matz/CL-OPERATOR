@@ -1,6 +1,6 @@
 (defsystem :CL-OPERATOR
   :description "CL-OPERATOR : a utility of operator overloading."
-  :version "0.9.0"
+  :version "0.9.1"
   :author "show-matz <show@architect-matsuoka.jpn.org>"
   :licence "LLGPL"
   :depends-on ("cl-overload")

@@ -42,6 +42,8 @@
 				:operator_+=
 				:operator_-=
 				:operator_!
+				:operator_move
+				:remove-reference
 				:_++
 				:_--
 				:_*
@@ -60,6 +62,7 @@
 				:_+=
 				:_-=
 				:_!
+				:move
 				:with-operators
 				;pointers.lisp
 				:pointer

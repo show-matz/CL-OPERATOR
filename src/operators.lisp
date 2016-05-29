@@ -30,6 +30,7 @@
 #|EXPORT|#				:operator_+=
 #|EXPORT|#				:operator_-=
 #|EXPORT|#				:operator_!
+#|EXPORT|#				:operator_move
 |#
 (defgeneric operator_++ (x))
 (defgeneric operator_-- (x))
@@ -51,6 +52,41 @@
 (defgeneric operator_+= (lhs rhs))
 (defgeneric operator_-= (lhs rhs))
 (defgeneric operator_!  (x))
+(defgeneric operator_move (lhs rhs))
+
+
+;;------------------------------------------------------------------------------
+;;
+;; helper class fo move semantics.
+;;
+;;------------------------------------------------------------------------------
+#|
+#|EXPORT|#				:remove-reference
+|#
+(defclass remove-reference ()
+  ((closure :type     cl:function
+			:initarg  :closure
+			:accessor __rm-ref-closure)))
+
+;;------------------------------------------------------------------------------
+;;
+;; internal utilities
+;;
+;;------------------------------------------------------------------------------
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun __setf-form-p (form)
+	(handler-case
+		(destructuring-bind (_call (_func (_setf sym)) _newval &rest args) form
+		  (declare (ignorable sym _newval args))
+		  (when (and (eq _call 'cl:funcall)
+					 (eq _func 'cl:function)
+					 (eq _setf 'cl:setf))
+			(cadr form)))
+	  (error (c) (declare (ignorable c)) nil)))
+
+  (defun __setter-exist-p (form)
+	(handler-case (eval form)
+	  (error (c) (declare (ignorable c)) nil))))
 
 ;;------------------------------------------------------------------------------
 ;;
@@ -76,6 +112,7 @@
 #|EXPORT|#				:_+=
 #|EXPORT|#				:_-=
 #|EXPORT|#				:_!
+#|EXPORT|#				:move
 |#
 (declare-macro-overload _++ (1 2))
 (declare-macro-overload _-- (1 2))
@@ -156,6 +193,34 @@
   `(operator_! ,x))
 
 
+(defmacro move (place)
+  "
+<<signature>>
+  (cl-operator:move place)
+
+<<parameters>>
+  place  : place to move source.
+
+<<return value>>
+  remove-reference to place.
+"
+  (labels ((fix-setter (form v)
+			 (let ((setter (__setf-form-p form)))
+			   (if (or (null setter) (__setter-exist-p setter)) form v))))
+	(let ((g-tag (gensym "TAG"))
+		  (g-obj (gensym "OBJ")))
+	  (multiple-value-bind (vars forms var set ref) (get-setf-expansion place)
+		`(let* (,@(mapcar #'cl:list vars forms)
+				(,g-obj ,ref))
+		   (if (eq (type-of ,g-obj) 'remove-reference)
+			   ,g-obj
+			   (make-instance 'remove-reference
+							  :closure (lambda (&optional (,@var ',g-tag))
+										 (if (eq ,@var ',g-tag)
+											 ,g-obj
+											 ,(fix-setter set (car var)))))))))))
+
+
 ;;------------------------------------------------------------------------------
 ;;
 ;; default operator implementation.
@@ -183,6 +248,28 @@
 ;; MEMO : pair ( cons ) is not 'clonable'.
 (defmethod operator_= ((a (eql nil)) (b clonable))
   (clone b))
+
+;; for move semantics
+(defmethod operator_= :around (a (b remove-reference))
+  (multiple-value-bind (lhs rhs)
+	  (operator_move a (funcall (the cl:function (__rm-ref-closure b))))
+	(funcall (the cl:function (__rm-ref-closure b)) rhs)
+	lhs))
+
+(defmethod operator_move (lhs rhs)
+  (if (eq lhs rhs)
+	  (values lhs rhs)
+	  (values rhs nil)))
+
+;; casting
+(defmethod  operator_cast (obj typename)
+  (unless (typep obj typename)
+	(error 'type-mismatch :what (format nil "Can't cast ~A to ~A." obj typename)))
+  obj)
+
+(defmethod operator_cast ((obj remove-reference) typename)
+	(operator_cast (funcall (the cl:function (__rm-ref-closure obj))) typename))
+
 
 ;; string
 (defmethod operator_== ((a string) (b string)) (string=  a b))
@@ -226,7 +313,6 @@
   
 (defmethod operator_const& ((arr cl:vector) (idx fixnum))
   (make-instance 'const-vector-pointer :buffer arr :index idx))
-
 
 
 ;;------------------------------------------------------------------------------

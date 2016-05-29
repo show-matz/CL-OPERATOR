@@ -2,6 +2,7 @@
   :description "CL-OPERATOR : a utility of operator overloading."
   :version "0.9.0"
   :author "show-matz <show@architect-matsuoka.jpn.org>"
+  :licence "LLGPL"
   :depends-on ("cl-overload")
   :components (#|-BEGIN COMPONENTS---------------------------------------------------|#
 			   (:file "cast"          :depends-on ("package"))

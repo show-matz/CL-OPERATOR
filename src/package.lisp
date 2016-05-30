@@ -73,10 +73,32 @@
 				:reverse-vector-pointer
 				:const-reverse-vector-pointer
 				;pointers-impl.lisp
+				;swap.lisp
+				:swap
 				#|-END EXPORT---------------|#))
 
 (in-package :cl-operator)
 
+
+;;------------------------------------------------------------------------------
+;;
+;; internal utilities
+;;
+;;------------------------------------------------------------------------------
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun __setf-form-p (form)
+	(handler-case
+		(destructuring-bind (_call (_func (_setf sym)) _newval &rest args) form
+		  (declare (ignorable sym _newval args))
+		  (when (and (eq _call 'cl:funcall)
+					 (eq _func 'cl:function)
+					 (eq _setf 'cl:setf))
+			(cadr form)))
+	  (error (c) (declare (ignorable c)) nil)))
+
+  (defun __setter-exist-p (form)
+	(handler-case (eval form)
+	  (error (c) (declare (ignorable c)) nil))))
 
 (defmacro __error-when-const-removing-assign (itr1 itrtype itr2 const-itrtype)
   `(when (and (eq (type-of ,itr1) ',itrtype)

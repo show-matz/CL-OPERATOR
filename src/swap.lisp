@@ -1,5 +1,5 @@
 #|
-#|ASD|#			   (:file "swap"          :depends-on ("package"))
+#|ASD|#			   (:file "swap"          :depends-on ("operators"))
 #|EXPORT|#				;swap.lisp
  |#
 

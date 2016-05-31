@@ -73,6 +73,10 @@
 				:reverse-vector-pointer
 				:const-reverse-vector-pointer
 				;pointers-impl.lisp
+				;reference.lisp
+				:reference
+				:ref
+				:with-reference
 				;swap.lisp
 				:swap
 				#|-END EXPORT---------------|#))
@@ -85,6 +89,18 @@
 ;; internal utilities
 ;;
 ;;------------------------------------------------------------------------------
+(defun onlisp/mkstr (&rest args)
+  (with-output-to-string (s)
+	(dolist (a args) (princ a s))))
+
+(defun onlisp/symb (&rest args)
+  (values (intern (apply #'onlisp/mkstr args))))
+
+(defun onlisp/flatten (x &optional (acc nil))
+  (cond ((null x) acc)
+		((atom x) (cons x acc))
+		(t (onlisp/flatten (car x) (onlisp/flatten (cdr x) acc)))))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun __setf-form-p (form)
 	(handler-case

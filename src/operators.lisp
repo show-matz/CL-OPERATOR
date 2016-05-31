@@ -1,5 +1,5 @@
 #|
-#|ASD|#			   (:file "operators"     :depends-on ("cast" "clone" "pointers"))
+#|ASD|#			   (:file "operators"     :depends-on ("pointers" "reference"))
 #|EXPORT|#				;operators.lisp
  |#
 
@@ -54,19 +54,6 @@
 (defgeneric operator_!  (x))
 (defgeneric operator_move (lhs rhs))
 
-
-;;------------------------------------------------------------------------------
-;;
-;; helper class fo move semantics.
-;;
-;;------------------------------------------------------------------------------
-#|
-#|EXPORT|#				:remove-reference
-|#
-(defclass remove-reference ()
-  ((closure :type     cl:function
-			:initarg  :closure
-			:accessor __rm-ref-closure)))
 
 ;;------------------------------------------------------------------------------
 ;;
@@ -195,10 +182,10 @@
 		   (if (eq (type-of ,g-obj) 'remove-reference)
 			   ,g-obj
 			   (make-instance 'remove-reference
-							  :closure (lambda (&optional (,@var ',g-tag))
-										 (if (eq ,@var ',g-tag)
-											 ,g-obj
-											 ,(fix-setter set (car var)))))))))))
+							  :accessor (lambda (&optional (,@var ',g-tag))
+										  (if (eq ,@var ',g-tag)
+											  ,g-obj
+											  ,(fix-setter set (car var)))))))))))
 
 
 ;;------------------------------------------------------------------------------
@@ -232,8 +219,8 @@
 ;; for move semantics
 (defmethod operator_= :around (a (b remove-reference))
   (multiple-value-bind (lhs rhs)
-	  (operator_move a (funcall (the cl:function (__rm-ref-closure b))))
-	(funcall (the cl:function (__rm-ref-closure b)) rhs)
+	  (operator_move a (funcall (the cl:function (reference-accessor b))))
+	(funcall (the cl:function (reference-accessor b)) rhs)
 	lhs))
 
 (defmethod operator_move (lhs rhs)
@@ -248,7 +235,7 @@
   obj)
 
 (defmethod operator_cast ((obj remove-reference) typename)
-	(operator_cast (funcall (the cl:function (__rm-ref-closure obj))) typename))
+	(operator_cast (funcall (the cl:function (reference-accessor obj))) typename))
 
 
 ;; string
@@ -348,19 +335,7 @@
 
 
 (defmacro with-operators (&rest body)
-  (labels ((onlisp/mkstr (&rest args)
-			 (with-output-to-string (s)
-			   (dolist (a args) (princ a s))))
-
-		   (onlisp/symb (&rest args)
-			 (values (intern (apply #'onlisp/mkstr args))))
-
-		   (onlisp/flatten (x &optional (acc nil))
-			 (cond ((null x) acc)
-				   ((atom x) (cons x acc))
-				   (t (onlisp/flatten (car x) (onlisp/flatten (cdr x) acc)))))
-
-		   (integer-check (substr)
+  (labels ((integer-check (substr)
 			 (handler-case (parse-integer substr)
 			   (error () substr)))
 

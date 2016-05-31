@@ -43,7 +43,6 @@
 				:operator_-=
 				:operator_!
 				:operator_move
-				:remove-reference
 				:_++
 				:_--
 				:_*
@@ -76,6 +75,7 @@
 				;reference.lisp
 				:reference
 				:ref
+				:remove-reference
 				:with-reference
 				;swap.lisp
 				:swap

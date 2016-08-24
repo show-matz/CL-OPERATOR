@@ -23,6 +23,7 @@
 				:type-mismatch
 				:undefined-behavior
 				:setf-to-const
+				;methods.lisp
 				;operators.lisp
 				:operator_++
 				:operator_--

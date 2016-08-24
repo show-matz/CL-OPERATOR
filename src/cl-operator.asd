@@ -1,6 +1,6 @@
 (defsystem :CL-OPERATOR
   :description "CL-OPERATOR : a utility of operator overloading."
-  :version "0.9.3"
+  :version "0.9.4"
   :author "show-matz <show@architect-matsuoka.jpn.org>"
   :licence "LLGPL"
   :depends-on ("cl-overload")
@@ -8,6 +8,7 @@
 			   (:file "cast"          :depends-on ("package"))
 			   (:file "clone"         :depends-on ("package"))
 			   (:file "exceptions"    :depends-on ("clone" "operators"))
+			   (:file "methods"       :depends-on ("operators"))
 			   (:file "operators"     :depends-on ("pointers" "reference"))
 			   (:file "package")
 			   (:file "pointers"      :depends-on ("cast" "clone"))

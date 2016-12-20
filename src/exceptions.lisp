@@ -29,7 +29,7 @@
 (defmethod operator_clone ((obj exception))
   (make-condition (type-of obj) :what (what obj)))
 
-(defmethod operator_= ((lhs (eql nil)) (rhs exception))
+(defmethod operator_= (lhs (rhs exception))
   (make-condition (type-of rhs) :what (what rhs)))
 
 (defmethod operator_= ((lhs exception) (rhs exception))

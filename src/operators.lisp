@@ -213,7 +213,7 @@
 
 ;; default assign to nil operator for clonable.
 ;; MEMO : pair ( cons ) is not 'clonable'.
-(defmethod operator_= ((a (eql nil)) (b clonable))
+(defmethod operator_= (a (b clonable))
   (clone b))
 
 ;; for move semantics

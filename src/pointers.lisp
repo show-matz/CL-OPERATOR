@@ -28,16 +28,12 @@
 #|EXPORT|#				:const-fixed-pointer
  |#
 (defclass const-fixed-pointer (pointer clonable)
-  ((getter :type     cl:function
-		   :initform nil
-		   :initarg  :getter
-		   :accessor fixed-ptr-getter)))
+  ((closure :type     cl:function
+			:initform nil
+			:initarg  :closure
+			:accessor fixed-ptr-closure)))
 
-(defclass fixed-pointer (const-fixed-pointer)
-  ((setter :type     cl:function
-		   :initform nil
-		   :initarg  :setter
-		   :accessor fixed-ptr-setter)))
+(defclass fixed-pointer (const-fixed-pointer) ())
 
 
 ;;------------------------------------------------------------------------------

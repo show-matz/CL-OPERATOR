@@ -79,6 +79,7 @@
 #|EXPORT|#				:_+=
 #|EXPORT|#				:_-=
 #|EXPORT|#				:_!
+#|EXPORT|#				:ref
 #|EXPORT|#				:move
 |#
 (declare-macro-overload _++ (1 2))
@@ -104,21 +105,28 @@
   `(prog1 (clone ,sym)
 	 (setf ,sym (operator_-- ,sym))))
 
-;(declare-macro-overload _& (1 2))
-(defmacro _& (&rest args)
-  (let ((cnt (length args)))
-    (cond ((= 1 cnt) (let ((g-newval (gensym "NEWVAL")))
-					   `(make-instance 'fixed-pointer :getter (lambda () ,(car args))
-													  :setter (lambda (,g-newval) (setf ,(car args) ,g-newval)))))
-          ((= 2 cnt) `(operator_& ,@args))
-          (t (error "can't resolve overload for ~a" '_&)))))
+;;(declare-macro-overload _& (1 2))
+;;(declare-macro-overload const_& (1 2))
+(labels ((__create-fixed-ptr (expr type)
+		   (let ((g-tag (gensym "TAG")))
+			 (multiple-value-bind (vars forms var set ref) (get-setf-expansion expr)
+			   `(let* (,@(mapcar #'cl:list vars forms))
+				  (make-instance ',type
+								 :closure (lambda (&optional (,@var ',g-tag))
+											(if (eq ,@var ',g-tag)
+												,ref
+												,(__fix-setter set (car var))))))))))
+  (defmacro _& (&rest args)
+	(let ((cnt (length args)))
+	  (cond ((= 1 cnt) (__create-fixed-ptr (car args) 'fixed-pointer))
+			((= 2 cnt) `(operator_& ,@args))
+			(t (error "can't resolve overload for ~a" '_&)))))
 
-;(declare-macro-overload const_& (1 2))
-(defmacro const_& (&rest args)
-  (let ((cnt (length args)))
-    (cond ((= 1 cnt) `(make-instance 'const-fixed-pointer :getter (lambda () ,(car args))))
-          ((= 2 cnt) `(operator_const& ,@args))
-          (t (error "can't resolve overload for ~a" '_&)))))
+  (defmacro const_& (&rest args)
+	(let ((cnt (length args)))
+	  (cond ((= 1 cnt) (__create-fixed-ptr (car args) 'const-fixed-pointer))
+			((= 2 cnt) `(operator_const& ,@args))
+			(t (error "can't resolve overload for ~a" 'const_&))))))
 
 
 
@@ -160,7 +168,37 @@
   `(operator_! ,x))
 
 
-(defmacro move (place)
+(labels ((__create-reference (expr type)
+		   (let ((g-tag (gensym "TAG"))
+				 (g-obj (gensym "OBJ")))
+			 (multiple-value-bind (vars forms var set ref) (get-setf-expansion expr)
+			   (if (eq type 'reference)
+				   `(let* (,@(mapcar #'cl:list vars forms)
+						   (,g-obj ,ref))
+					  (if (eq (type-of ,g-obj) 'reference)
+						  ,g-obj
+						  (make-instance 'reference
+										 :accessor (lambda (&optional (,@var ',g-tag))
+													 (if (eq ,@var ',g-tag)
+														 ,ref
+														 ,(__fix-setter set (car var)))))))
+				   `(let* (,@(mapcar #'cl:list vars forms)
+						   (,g-obj ,ref))
+					  (typecase ,g-obj
+						(remove-reference ,g-obj)
+						(reference
+						 (make-instance 'remove-reference
+										:accessor (reference-accessor ,g-obj)))
+						(t
+						 (make-instance 'remove-reference
+										:accessor (lambda (&optional (,@var ',g-tag))
+													(if (eq ,@var ',g-tag)
+														,ref
+														,(__fix-setter set (car var)))))))))))))
+  (defmacro ref (place)
+	(__create-reference place 'reference))
+  
+  (defmacro move (place)
   "
 <<signature>>
   (cl-operator:move place)
@@ -171,21 +209,7 @@
 <<return value>>
   remove-reference to place.
 "
-  (labels ((fix-setter (form v)
-			 (let ((setter (__setf-form-p form)))
-			   (if (or (null setter) (__setter-exist-p setter)) form v))))
-	(let ((g-tag (gensym "TAG"))
-		  (g-obj (gensym "OBJ")))
-	  (multiple-value-bind (vars forms var set ref) (get-setf-expansion place)
-		`(let* (,@(mapcar #'cl:list vars forms)
-				(,g-obj ,ref))
-		   (if (eq (type-of ,g-obj) 'remove-reference)
-			   ,g-obj
-			   (make-instance 'remove-reference
-							  :accessor (lambda (&optional (,@var ',g-tag))
-										  (if (eq ,@var ',g-tag)
-											  ,g-obj
-											  ,(fix-setter set (car var)))))))))))
+	(__create-reference place 'remove-reference)))
 
 
 ;;------------------------------------------------------------------------------
@@ -234,7 +258,7 @@
 	(error 'type-mismatch :what (format nil "Can't cast ~A to ~A." obj typename)))
   obj)
 
-(defmethod operator_cast ((obj remove-reference) typename)
+(defmethod operator_cast ((obj reference) typename)
 	(operator_cast (funcall (the cl:function (reference-accessor obj))) typename))
 
 

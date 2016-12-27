@@ -62,6 +62,7 @@
 				:_+=
 				:_-=
 				:_!
+				:ref
 				:move
 				:with-operators
 				;pointers.lisp
@@ -75,7 +76,6 @@
 				;pointers-impl.lisp
 				;reference.lisp
 				:reference
-				:ref
 				:remove-reference
 				:with-reference
 				;swap.lisp
@@ -115,7 +115,14 @@
 
   (defun __setter-exist-p (form)
 	(handler-case (eval form)
-	  (error (c) (declare (ignorable c)) nil))))
+	  (error (c) (declare (ignorable c)) nil)))
+
+  (defun __fix-setter (form v)
+	(let ((setter (__setf-form-p form)))
+	  (if (or (null setter)
+			  (__setter-exist-p setter))
+		  form
+		  v))))
 
 (defmacro __error-when-const-removing-assign (itr1 itrtype itr2 const-itrtype)
   `(when (and (eq (type-of ,itr1) ',itrtype)

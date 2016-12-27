@@ -30,20 +30,16 @@
 <<return value>>
   nil.
 "
-  (labels ((fix-setter (form)
-			 (let ((setter (__setf-form-p form)))
-			   (when (or (null setter) (__setter-exist-p setter))
-				 form))))
-	(multiple-value-bind (vars1 forms1 var1 set1 ref1) (get-setf-expansion a)
-	  (multiple-value-bind (vars2 forms2 var2 set2 ref2) (get-setf-expansion b)
-		`(let* (,@(mapcar #'cl:list vars1 forms1)
-				,@(mapcar #'cl:list vars2 forms2))
-		   (multiple-value-bind (,@var1 ,@var2)
-			   (,(make-overload-name 'cl-operator:swap 2) ,ref1 ,ref2)
-			 (declare (ignorable ,@var1 ,@var2))
-			 ,(fix-setter set1)
-			 ,(fix-setter set2)
-			 nil))))))
+  (multiple-value-bind (vars1 forms1 var1 set1 ref1) (get-setf-expansion a)
+	(multiple-value-bind (vars2 forms2 var2 set2 ref2) (get-setf-expansion b)
+	  `(let* (,@(mapcar #'cl:list vars1 forms1)
+			  ,@(mapcar #'cl:list vars2 forms2))
+		 (multiple-value-bind (,@var1 ,@var2)
+			 (,(make-overload-name 'cl-operator:swap 2) ,ref1 ,ref2)
+		   (declare (ignorable ,@var1 ,@var2))
+		   ,(__fix-setter set1 nil)
+		   ,(__fix-setter set2 nil)
+		   nil)))))
 
 
 

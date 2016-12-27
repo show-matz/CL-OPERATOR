@@ -22,10 +22,10 @@
 ;-------------------------------------------------------------------------------
 (defmethod operator_clone ((ptr const-fixed-pointer))
   (make-instance 'const-fixed-pointer
-				 :getter (fixed-ptr-getter ptr)))
+				 :closure (fixed-ptr-closure ptr)))
 
 (defmethod operator_* ((ptr const-fixed-pointer))
-  (funcall (fixed-ptr-getter ptr)))
+  (funcall (fixed-ptr-closure ptr)))
 
 (defmethod (setf operator_*) (new-val (ptr const-fixed-pointer))
   (error 'setf-to-const :what "setf to (operator_* const-fixed-pointer)."))
@@ -33,7 +33,7 @@
 (defmethod operator_= ((ptr1 const-fixed-pointer) (ptr2 const-fixed-pointer))
   (__error-when-const-removing-assign ptr1 fixed-pointer
 									  ptr2 const-fixed-pointer)
-  (setf (fixed-ptr-getter ptr1) (fixed-ptr-getter ptr2))
+  (setf (fixed-ptr-closure ptr1) (fixed-ptr-closure ptr2))
   ptr1)
 
 ;-------------------------------------------------------------------------------
@@ -43,16 +43,15 @@
 ;-------------------------------------------------------------------------------
 (defmethod operator_clone ((ptr fixed-pointer))
   (make-instance 'fixed-pointer
-				 :getter (fixed-ptr-getter ptr)
-				 :setter (fixed-ptr-setter ptr)))
+				 :closure (fixed-ptr-closure ptr)))
 
 (defmethod operator_cast ((ptr fixed-pointer)
 						  (typename (eql 'const-fixed-pointer)))
   (__check-exact-type-of-cast ptr 'fixed-pointer 'const-fixed-pointer)
-  (make-instance 'const-fixed-pointer :getter (fixed-ptr-getter ptr)))
+  (make-instance 'const-fixed-pointer :closure (fixed-ptr-closure ptr)))
 
 (defmethod (setf operator_*) (new-val (ptr fixed-pointer))
-  (funcall (fixed-ptr-setter ptr) new-val))
+  (funcall (fixed-ptr-closure ptr) new-val))
 
 
 ;;------------------------------------------------------------------------------
